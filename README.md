@@ -1,2 +1,2 @@
-# dan-scheme
-An implementation of [r5rs Scheme](https://schemers.org/Documents/Standards/R5RS/HTML/) in C
+# dan_basic
+An implementation of a simple language sort of like vb. 
