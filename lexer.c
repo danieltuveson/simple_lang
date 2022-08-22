@@ -5,25 +5,28 @@ void print_lexer(struct Lexer *lexer)
 {
     if (lexer == NULL)
         return;
-    printf("\nLexer\n{\n    line_number = %d\n    column_number = %d\n    ", lexer->line_number, lexer->column_number);
+    printf("\nLexer\n{\n    line_number = %lu\n    column_number = %lu\n    ", lexer->line_number, lexer->column_number);
     printf("content = ");
     switch (lexer->type)
     {
-    case SIMPLE_TOKEN:
-        printf("%s", print_simple_token(lexer->simple_token));
-        break;
-    case NUMBER_TOKEN:
-        printf("%d", lexer->number);
-        break;
-    case STRING_TOKEN:
-        printf("\"%s\"", lexer->string);
-        break;
-    case VARIABLE_TOKEN:
-        printf("%s", lexer->variable);
-        break;
-    default:
-        printf("Unknown type");
-        break;
+        case SIMPLE_TOKEN:
+            printf("%s", print_simple_token(lexer->simple_token));
+            break;
+        case NUMBER_TOKEN:
+            printf("%d", lexer->number);
+            break;
+        case STRING_TOKEN:
+            printf("\"%s\"", lexer->string);
+            break;
+        case VARIABLE_TOKEN:
+            printf("%s", lexer->variable);
+            break;
+        case COMMENT_TOKEN:
+            printf("%s", lexer->comment);
+            break;
+        default:
+            printf("Unknown type");
+            break;
     }
     printf("\n}\n");
     print_lexer(lexer->next);
@@ -33,10 +36,10 @@ void print_lexer(struct Lexer *lexer)
 // If there's an error, stop lexing
 char *tokens(struct Lexer *lexer, char *string)
 {
-    int num, i;
-    char c;
-    char *error;
-    int line_number, column_number;
+    int num, i, capacity;
+    char c, prevc;
+    char *error, *str;
+    unsigned long line_number, column_number;
     line_number = 1;
     column_number = 1;
     error = calloc(200, sizeof(char));
@@ -157,30 +160,57 @@ char *tokens(struct Lexer *lexer, char *string)
 
         // Multi-character tokens
 
+        // Comment
+        else if (c == '\'')
+        {
+            capacity = 10;
+            prevc = '\0';
+            str = calloc(capacity, sizeof(char));
+            i = 0;
+            for (c = *string; c != '\0' && c != '\n'; string++, c = *string)
+            {
+                if (i == (capacity - 1))
+                {
+                    str = grow_string(str, &capacity);
+                }
+                *(str+i) = c;
+                i++;
+                column_number++;
+                prevc = c;
+
+            }
+            string--;
+            column_number--;
+            lexer->type = COMMENT_TOKEN;
+            lexer->comment = str;
+        }
         // String
         // TODO: fix this
         else if (c == '"')
         {
-            char prevc;
-            char *str, *old_str;
-            int capacity = 10;
+            capacity = 10;
             prevc = '\0';
             str = calloc(capacity, sizeof(char));
             i = 0;
-            for (c = *string; c != '\0' && ((c != '"') || (prevc == '\\' && c == '"')); string++, c = *string)
+            string++;
+            column_number++;
+            for (c = *string; 
+                    (c != '"') || (prevc == '\\' && c == '"'); 
+                    string++, c = *string)
             {
                 if (i == (capacity - 1))
                 {
-                    capacity *= 2;
-                    old_str = str;
-                    str = calloc(capacity, sizeof(char));
-                    strcpy(str, old_str);
-                    free(old_str);
+                    str = grow_string(str, &capacity);
                 }
 
                 if (c == '\n')
                 {
-                    sprintf(error, "Error at line %d, column %d: newline in string literal", line_number, column_number);
+                    sprintf(error, "Error at line %lu, column %lu: newline in string literal", line_number, column_number);
+                    return error;
+                }
+                else if (c =='\0')
+                {
+                    sprintf(error, "Error at line %lu, column %lu: end of file reached before closing of string literal", line_number, column_number);
                     return error;
                 }
                 else if (prevc == '\\') 
@@ -197,7 +227,7 @@ char *tokens(struct Lexer *lexer, char *string)
                             *(str+i) = '\n';
                             break;
                         default:
-                            sprintf(error, "Error at line %d, column %d: unknown escape sequence '\\%c'", line_number, column_number, c);
+                            sprintf(error, "Error at line %lu, column %lu: unknown escape sequence '\\%c'", line_number, column_number, c);
                             return error;
                     }
                     i++;
@@ -207,19 +237,15 @@ char *tokens(struct Lexer *lexer, char *string)
                     *(str+i) = c;
                     i++;
                 }
-                // if c == '\\' then we keep going
                 column_number++;
                 prevc = c;
             }
-            if (prevc == '\0' || prevc == '\n')
-            {
-                sprintf(error, "Error at line %d, column %d: unexpected end of string", line_number, column_number);
-                return error;
-            }
+            column_number++;
             lexer->type = STRING_TOKEN;
             lexer->string = str;
             printf("%c\n",c);
         }
+
         // Int
         else if (isdigit(c))
         {
@@ -229,7 +255,7 @@ char *tokens(struct Lexer *lexer, char *string)
             {
                 if (!isdigit(c))
                 {
-                    sprintf(error, "Error at line %d, column %d: alphanumeric may not begin with a digit", line_number, column_number);
+                    sprintf(error, "Error at line %lu, column %lu: alphanumeric may not begin with a digit", line_number, column_number);
                     return error;
                 }
                 i = c - '0';
@@ -250,7 +276,7 @@ char *tokens(struct Lexer *lexer, char *string)
             {
                 if (!(isalnum(c) || c == '_'))
                 {
-                    sprintf(error, "Error at line %d, column %d: unknown character in token: %c", line_number, column_number, c);
+                    sprintf(error, "Error at line %lu, column %lu: unknown character in token: %c", line_number, column_number, c);
                     return error;
                 }
                 column_number++;
@@ -296,7 +322,7 @@ char *tokens(struct Lexer *lexer, char *string)
         }
         else
         {
-            sprintf(error, "Error at line %d, column %d: unknown character: %c", line_number, column_number, c);
+            sprintf(error, "Error at line %lu, column %lu: unknown character: %c", line_number, column_number, c);
             return error;
         }
         lexer->next = malloc(sizeof(struct Lexer));
@@ -310,4 +336,15 @@ char *tokens(struct Lexer *lexer, char *string)
     lexer->type = SIMPLE_TOKEN;
     lexer->simple_token = END_OF_STREAM;
     return NULL;
+}
+
+char *grow_string(char *str, int *capacity)
+{
+    char *old_str;
+    *capacity *= 2;
+    old_str = str;
+    str = calloc(*capacity, sizeof(char));
+    strcpy(str, old_str);
+    free(old_str);
+    return str;
 }

@@ -121,7 +121,7 @@ struct Statements
 struct Parser
 {
     char **errors;
-    struct Lexer *lexer;
+    // struct Lexer *lexer;
     struct Statements *statements;
 };
 

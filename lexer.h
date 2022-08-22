@@ -38,19 +38,21 @@ enum TokenType
     SIMPLE_TOKEN,
     NUMBER_TOKEN,
     STRING_TOKEN,
+    COMMENT_TOKEN,
     VARIABLE_TOKEN
 };
 
 struct Lexer
 {
-    int line_number;
-    int column_number;
+    unsigned long line_number;
+    unsigned long column_number;
     enum TokenType type;
     union
     {
         enum SimpleToken simple_token;
         int number;
         char *string;
+        char *comment;
         char *variable;
     };
     struct Lexer *next;
