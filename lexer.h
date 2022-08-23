@@ -1,5 +1,6 @@
 #ifndef LEXER
 #define LEXER
+
 #include "stdincludes.h"
 
 enum SimpleToken
@@ -21,7 +22,7 @@ enum SimpleToken
     AND_TOK,
     OR_TOK,
     EQ_TOK,
-    DOUBLE_EQ,
+    // DOUBLE_EQ,
     NEQ_TOK,
     LEQ_TOK,
     GEQ_TOK,
@@ -100,8 +101,8 @@ static inline char *print_simple_token(enum SimpleToken token)
         return "OR_TOK";
     case EQ_TOK:
         return "EQ_TOK";
-    case DOUBLE_EQ:
-        return "DOUBLE_EQ";
+    // case DOUBLE_EQ:
+    //     return "DOUBLE_EQ";
     case NEQ_TOK:
         return "NEQ_TOK";
     case LEQ_TOK:
@@ -121,6 +122,25 @@ static inline char *print_simple_token(enum SimpleToken token)
     case SLASH:
         return "SLASH";
     }
+}
+
+static inline bool is_operator_token(enum SimpleToken simple_token)
+{
+    return (simple_token == OPEN_PAREN || 
+    simple_token == CLOSE_PAREN || 
+    simple_token == NOT_TOK || 
+    simple_token == AND_TOK || 
+    simple_token == OR_TOK || 
+    simple_token == EQ_TOK || 
+    simple_token == NEQ_TOK || 
+    simple_token == LEQ_TOK || 
+    simple_token == GEQ_TOK || 
+    simple_token == GREATER_TOK || 
+    simple_token == LESS_TOK || 
+    simple_token == PLUS || 
+    simple_token == MINUS || 
+    simple_token == STAR || 
+    simple_token == SLASH);
 }
 
 #include "lexer.c.generated.h"

@@ -11,7 +11,7 @@ enum LiteralType
     INTEGER,
     STRING,
     VARIABLE
-    // ARRAY
+        // ARRAY
 };
 
 struct Literal
@@ -22,14 +22,19 @@ struct Literal
         bool boolean;
         int integer;
         char *string;
-        char *variable;
+        char *variable_name;
         // struct Expression *array;
     };
 };
 
-enum Operation
+enum UnaryOperation
 {
     NOT,
+    NEGATE
+};
+
+enum BinaryOperation
+{
     AND,
     OR,
     EQ,
@@ -46,7 +51,8 @@ enum Operation
 
 enum ExpressionType
 {
-    EXPRESSION,
+    UNARY_EXPRESSION,
+    BINARY_EXPRESSION,
     LITERAL
 };
 
@@ -56,26 +62,29 @@ union ExpressionContent
     struct Literal *literal;
 };
 
-// Not all of these need to be populated, e.g. a single literal won't have
-// an operation and a NOT operation will only take one content as input.
-struct Expression
+struct UnaryExpression
 {
-    enum ExpressionType Operation;
+    enum UnaryOperation operation;
+    enum ExpressionType type;
+    union ExpressionContent *content;
+};
+
+struct BinaryExpression
+{
+    enum BinaryOperation operation;
     enum ExpressionType type1;
     union ExpressionContent *content1;
     enum ExpressionType type2;
     union ExpressionContent *content2;
 };
 
-enum StatementType
+// Not all of these need to be populated, e.g. a single literal won't have
+// an operation and a NOT operation will only take one content as input.
+struct Expression
 {
-    IF,
-    // IF_ELSE,
-    LOOP,
-    DECLARATION,
-    ASSIGNMENT,
-    PRINT
+    enum ExpressionType type;
 };
+
 
 struct If
 {
@@ -96,6 +105,16 @@ struct Assignment
 {
     Variable variable;
     struct Expression *value;
+};
+
+enum StatementType
+{
+    IF,
+    // IF_ELSE,
+    LOOP,
+    DECLARATION,
+    ASSIGNMENT,
+    PRINT
 };
 
 struct Statement

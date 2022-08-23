@@ -1,5 +1,5 @@
 #include "lexer.h"
-
+#include "error.h"
 
 void print_lexer(struct Lexer *lexer)
 {
@@ -38,11 +38,10 @@ char *tokens(struct Lexer *lexer, char *string)
 {
     int num, i, capacity;
     char c, prevc;
-    char *error, *str;
+    char *str;
     unsigned long line_number, column_number;
     line_number = 1;
     column_number = 1;
-    error = calloc(200, sizeof(char));
 
     for (c = *string; c != '\0'; string++, c = *string)
     {
@@ -108,16 +107,18 @@ char *tokens(struct Lexer *lexer, char *string)
             string++;
             c = *string;
             column_number++;
-            if (c == '=')
-            {
-                lexer->simple_token = DOUBLE_EQ;
-                column_number++;
-            }
-            else
-            {
-                lexer->simple_token = EQ_TOK;
-                string--;
-            }
+            // For now just going to use single equals for equality check
+            // Maybe I'll change my mind later
+            // if (c == '=')
+            // {
+            //     lexer->simple_token = DOUBLE_EQ;
+            //     column_number++;
+            // }
+            // else
+            // {
+            // }
+            lexer->simple_token = EQ_TOK;
+            string--;
         }
         else if (c == '<')
         {
@@ -205,13 +206,11 @@ char *tokens(struct Lexer *lexer, char *string)
 
                 if (c == '\n')
                 {
-                    sprintf(error, "Error at line %lu, column %lu: newline in string literal", line_number, column_number);
-                    return error;
+                    return error(line_number, column_number, "newline in string literal");
                 }
                 else if (c =='\0')
                 {
-                    sprintf(error, "Error at line %lu, column %lu: end of file reached before closing of string literal", line_number, column_number);
-                    return error;
+                    return error(line_number, column_number, "end of file reached before closing of string literal");
                 }
                 else if (prevc == '\\') 
                 {
@@ -219,6 +218,7 @@ char *tokens(struct Lexer *lexer, char *string)
                     {
                         case '\\':
                             *(str+i) = '\\';
+                            c = '\0'; // set to garbage so we don't escape a '"' or 'n'
                             break;
                         case '"':
                             *(str+i) = '"';
@@ -227,8 +227,7 @@ char *tokens(struct Lexer *lexer, char *string)
                             *(str+i) = '\n';
                             break;
                         default:
-                            sprintf(error, "Error at line %lu, column %lu: unknown escape sequence '\\%c'", line_number, column_number, c);
-                            return error;
+                            return error(line_number, column_number, "unknown escape sequence '\\%c'", c);
                     }
                     i++;
                 }
@@ -254,10 +253,7 @@ char *tokens(struct Lexer *lexer, char *string)
             for (c = *string; !is_delimiter(c); string++, c = *string)
             {
                 if (!isdigit(c))
-                {
-                    sprintf(error, "Error at line %lu, column %lu: alphanumeric may not begin with a digit", line_number, column_number);
-                    return error;
-                }
+                    return error(line_number, column_number, "alphanumeric may not begin with a digit");
                 i = c - '0';
                 num *= 10;
                 num += i;
@@ -276,8 +272,7 @@ char *tokens(struct Lexer *lexer, char *string)
             {
                 if (!(isalnum(c) || c == '_'))
                 {
-                    sprintf(error, "Error at line %lu, column %lu: unknown character in token: %c", line_number, column_number, c);
-                    return error;
+                    return error(line_number, column_number, "unknown character in token: '%c'", c);
                 }
                 column_number++;
             }
@@ -322,8 +317,7 @@ char *tokens(struct Lexer *lexer, char *string)
         }
         else
         {
-            sprintf(error, "Error at line %lu, column %lu: unknown character: %c", line_number, column_number, c);
-            return error;
+            return error(line_number, column_number, "unknown character: '%c'", c);
         }
         lexer->next = malloc(sizeof(struct Lexer));
         lexer = lexer->next;

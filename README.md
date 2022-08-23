@@ -17,3 +17,4 @@ If you have zsh, then just run `zsh run.sh`. If you run with no arguments, you w
 - Build parser
 - Add test suite
 - Build interpreter
+- Add operator precedence

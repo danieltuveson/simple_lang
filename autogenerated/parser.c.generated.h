@@ -1,1 +1,1 @@
-struct Parser *parse(struct Lexer *lexer);
+char *parse_expression(struct Expression **expression, struct Lexer *lexer);
