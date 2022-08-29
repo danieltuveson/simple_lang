@@ -27,3 +27,13 @@ char *error(unsigned long line_number, unsigned long column_number, char *fmt, .
 
     return error;
 }
+
+char *parse_error(struct Lexer *lexer, char *fmt, ...)
+{
+    char *err;
+    va_list args;
+    va_start(args, fmt);
+    err = error(lexer->line_number, lexer->column_number, fmt, args);
+    va_end(args);
+    return err;
+}
