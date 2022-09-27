@@ -11,7 +11,7 @@ end if
 ```
 
 ## How to build
-If you have zsh, then just run `zsh run.sh`. If you run with no arguments, you will be dropped into the repl. If you run with a filename as the argument, it will execute that file. If your build was successful, you can just rerun by running the binary `dan_basic` file that is created by the `run.sh` script. I've only tested this on macOS (which I think uses clang), so it may not build on all systems / compilers.
+If you have zsh, then just run `zsh run.sh`. If you run with no arguments, you will be dropped into the repl. If you run with a filename as the argument, it will execute that file. If your build was successful, you can just rerun by running the binary `dan_basic` file that is created by the `run.sh` script. I've only tested this on macOS (Apple clang version 13.0.0), so it may not build on all systems / compilers.
 
 ## TODO
 - Build parser

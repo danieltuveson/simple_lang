@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include "io.h"
+#include "log.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +17,7 @@ int main(int argc, char *argv[])
     {
         exit(EXIT_FAILURE);
     }
-
+    
+    log("program completed successfully\n");
     return 0;
 }

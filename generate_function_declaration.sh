@@ -18,4 +18,4 @@ if [[ ! -e $file_name ]]; then
     exit 1
 fi
 
-cat $file_name | egrep '^(\w|\d|\_|\*)+\s+(\w|\d|\_|\*)+\([^\)]*\)' | sed -r 's/$/;/g' > $file_name.generated.h
+cat $file_name | egrep '^((\w|\d|\_|\*)+\s+)+(\w|\d|\_|\*)+\([^\)]*\)' | sed -r 's/$/;/g' > $file_name.generated.h

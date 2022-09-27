@@ -3,146 +3,105 @@
 
 #include "stdincludes.h"
 #include "lexer.h"
+#include "datatype.h"
 
-enum LiteralType
+enum ParseType
 {
-    NONE,
-    BOOLEAN,
-    INTEGER,
-    STRING,
-    VARIABLE
-        // ARRAY
-};
-
-struct Literal
-{
-    enum LiteralType type;
-    union
-    {
-        bool boolean;
-        int integer;
-        char *string;
-        char *variable_name;
-        // struct Expression *array;
-    };
-};
-
-enum UnaryOperation
-{
-    NOT,
-    NEGATE
-};
-
-enum BinaryOperation
-{
-    AND,
-    OR,
-    EQ,
-    GEQ,
-    LEQ,
-    GREATER,
-    LESS,
-    ADD,
-    SUBTRACT,
-    MULTIPLY,
-    DIVIDE,
-    CONCAT
-};
-
-enum ExpressionType
-{
-    UNARY_EXPRESSION,
-    BINARY_EXPRESSION,
-    LITERAL
-};
-
-union ExpressionContent
-{
-    struct Expression *expression;
-    struct Literal *literal;
-};
-
-struct UnaryExpression
-{
-    enum UnaryOperation operation;
-    enum ExpressionType type;
-    union ExpressionContent *content;
-};
-
-struct BinaryExpression
-{
-    enum BinaryOperation operation;
-    enum ExpressionType type1;
-    union ExpressionContent *content1;
-    enum ExpressionType type2;
-    union ExpressionContent *content2;
-};
-
-// Not all of these need to be populated, e.g. a single literal won't have
-// an operation and a NOT operation will only take one content as input.
-struct Expression
-{
-    enum ExpressionType type;
-};
-
-
-struct If
-{
-    struct Expression *condition;
-    struct Statement **statements;
-};
-
-struct Loop
-{
-    struct Expression *condition;
-    struct Statement **statements;
-};
-
-typedef char *Variable;
-typedef Variable *Declaration;
-
-struct Assignment
-{
-    Variable variable;
-    struct Expression *value;
-};
-
-enum StatementType
-{
-    IF,
-    // IF_ELSE,
-    LOOP,
-    DECLARATION,
-    ASSIGNMENT,
-    PRINT
-};
-
-struct Statement
-{
-    enum StatementType type;
-    union
-    {
-        struct If *if_statement;
-        struct Loop *loop;
-        struct Declaration *declaration;
-        struct Assignment *assignment;
-        char *var_to_print;
-    };
-};
-
-struct Statements
-{
-    int size;
-    int capacity;
-    struct Statement **statements;
+    PARSE_ERROR,
+    END_OF_EXPRESSION,
+    PARSED_EXPRESSION
 };
 
 struct Parser
 {
-    char **errors;
-    // struct Lexer *lexer;
-    struct Statements *statements;
+    enum ParseType type;
+    struct Lexer *lexer;
+    // Going to remove union since partial expression could be 
+    // useful for error messages?
+    // union
+    // {
+    char *error;
+    struct Expr *expr;
+    // };
 };
+
+struct ParseStmts
+{
+    enum ParseType type;
+    struct Lexer *lexer;
+    char *error;
+    struct Statements *stmts;
+};
+
+static inline int get_operator_precedence(enum SimpleToken simple_token)
+{
+    if (simple_token == OPEN_PAREN || simple_token == CLOSE_PAREN)
+    {
+        return 1;
+    }
+    else if (simple_token == STAR || simple_token == SLASH)
+    {
+        return 2;
+    }
+    else if (simple_token == PLUS || simple_token == MINUS)
+    {
+        return 3;
+    }
+    else if (simple_token == LEQ_TOK || simple_token == GEQ_TOK || 
+            simple_token == GREATER_TOK || simple_token == LESS_TOK)
+    {
+        return 4;
+    }
+    else if (simple_token == DOUBLE_EQ || simple_token == NEQ_TOK)
+    {
+        return 5;
+    }
+    else if (simple_token == AND_TOK)
+    {
+        return 6;
+    }
+    else if (simple_token == OR_TOK)
+    {
+        return 7;
+    }
+    assert(false);
+    return -1;
+}
+
+static inline enum BinaryOp token_to_op(enum SimpleToken st)
+{
+    switch (st)
+    {
+        case AND_TOK:
+            return AND;
+        case OR_TOK:
+            return OR;
+        case DOUBLE_EQ:
+            return EQ;
+        case NEQ_TOK:
+            return NEQ;
+        case GEQ_TOK:
+            return GEQ;
+        case LEQ_TOK:
+            return LEQ;
+        case GREATER_TOK:
+            return GREATER;
+        case LESS_TOK:
+            return LESS;
+        case PLUS:
+            return ADD;
+        case MINUS:
+            return SUBTRACT;
+        case STAR:
+            return MULTIPLY;
+        case SLASH:
+            return DIVIDE;
+        default:
+            assert(false);
+    }
+};
+
+
 
 #include "parser.c.generated.h"
 #endif

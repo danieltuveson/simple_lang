@@ -2,6 +2,7 @@
 
 char *error(unsigned long line_number, unsigned long column_number, char *fmt, ...)
 {
+    
     char *error, *str;
     unsigned long message_length, template_length;
     template_length = 100;

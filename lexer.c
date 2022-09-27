@@ -1,36 +1,6 @@
 #include "lexer.h"
 #include "error.h"
-
-void print_lexer(struct Lexer *lexer)
-{
-    if (lexer == NULL)
-        return;
-    printf("\nLexer\n{\n    line_number = %lu\n    column_number = %lu\n    ", lexer->line_number, lexer->column_number);
-    printf("content = ");
-    switch (lexer->type)
-    {
-        case SIMPLE_TOKEN:
-            printf("%s", print_simple_token(lexer->simple_token));
-            break;
-        case NUMBER_TOKEN:
-            printf("%d", lexer->number);
-            break;
-        case STRING_TOKEN:
-            printf("\"%s\"", lexer->string);
-            break;
-        case VARIABLE_TOKEN:
-            printf("%s", lexer->variable);
-            break;
-        case COMMENT_TOKEN:
-            printf("%s", lexer->comment);
-            break;
-        default:
-            printf("Unknown type");
-            break;
-    }
-    printf("\n}\n");
-    print_lexer(lexer->next);
-}
+#include "log.h"
 
 // Break string into tokens
 // If there's an error, stop lexing
@@ -107,18 +77,16 @@ char *tokens(struct Lexer *lexer, char *string)
             string++;
             c = *string;
             column_number++;
-            // For now just going to use single equals for equality check
-            // Maybe I'll change my mind later
-            // if (c == '=')
-            // {
-            //     lexer->simple_token = DOUBLE_EQ;
-            //     column_number++;
-            // }
-            // else
-            // {
-            // }
-            lexer->simple_token = EQ_TOK;
-            string--;
+            if (c == '=')
+            {
+                lexer->simple_token = DOUBLE_EQ;
+                column_number++;
+            }
+            else
+            {
+                lexer->simple_token = EQ_TOK;
+                string--;
+            }
         }
         else if (c == '<')
         {
@@ -140,7 +108,6 @@ char *tokens(struct Lexer *lexer, char *string)
                 lexer->simple_token = LESS_TOK;
                 string--;
             }
-
         }
         else if (c == '>')
         {
@@ -187,6 +154,8 @@ char *tokens(struct Lexer *lexer, char *string)
         }
         // String
         // TODO: fix this
+        // actually... maybe this works? 
+        // I think I was allocing wrong before, so maybe that was the issue
         else if (c == '"')
         {
             capacity = 10;
@@ -242,7 +211,7 @@ char *tokens(struct Lexer *lexer, char *string)
             column_number++;
             lexer->type = STRING_TOKEN;
             lexer->string = str;
-            printf("%c\n",c);
+            // printf("%c\n",c);
         }
 
         // Int
@@ -286,10 +255,14 @@ char *tokens(struct Lexer *lexer, char *string)
             *(word + max) = '\0';
 
             // Check for keyword
-            if (strcmp("if", word) == 0)
+            if (strcmp("dim", word) == 0)
+                lexer->simple_token = DIM;
+            else if (strcmp("if", word) == 0)
                 lexer->simple_token = IF_TOK;
             else if (strcmp("elseif", word) == 0)
                 lexer->simple_token = ELSEIF;
+            else if (strcmp("then", word) == 0)
+                lexer->simple_token = THEN;
             else if (strcmp("else", word) == 0)
                 lexer->simple_token = ELSE_TOK;
             else if (strcmp("end", word) == 0)

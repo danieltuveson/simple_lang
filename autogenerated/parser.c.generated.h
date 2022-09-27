@@ -1,1 +1,11 @@
-char *parse_expression(struct Expression **expression, struct Lexer *lexer);
+struct ParseStmts *new_parse_stmts(struct Lexer *lexer);
+struct ParseStmts *parse_all_stmts(struct Lexer *lexer);
+struct ParseStmts *parse_stmts(struct Lexer *lexer);
+struct ParseStmts *parse_assignment(char *var_name, struct ParseStmts *parser);
+void parse_declarations(struct ParseStmts *parser);
+struct ParseStmts *parse_if(struct ParseStmts *parser);
+void parse_loop(struct ParseStmts *parser);
+struct Parser *parse_expr(struct Lexer *lexer);
+struct Parser *parse_exp_precedence(struct Parser *parser, int min_precedence);
+struct Parser *parse_literal(struct Parser *parser);
+struct FunctionCall *parse_function_call(void);
