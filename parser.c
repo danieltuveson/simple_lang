@@ -13,12 +13,6 @@ struct ParseStmts *new_parse_stmts(struct Lexer *lexer)
     return parser;
 }
 
-struct ParseStmts *parse_all_stmts(struct Lexer *lexer)
-{
-    struct ParseStmts *parser = parse_stmts(lexer);
-    return NULL;
-}
-
 struct ParseStmts *parse_stmts(struct Lexer *lexer)
 {
     enum TokenType t;
@@ -28,7 +22,7 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
 
     while (true)
     {
-        log("line,col:%lu,%lu\n", parser->lexer->line_number, parser->lexer->column_number);
+        // log("line %lu, col %lu\n", parser->lexer->line_number, parser->lexer->column_number);
         t = parser->lexer->type; 
         switch (t)
         {
@@ -39,23 +33,25 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
                         parser->lexer = parser->lexer->next;
                         parser = parse_if(parser);
                         break;
-                    case WHILE:
-                        parse_loop(parser);
+                    case WHILE_TOK:
+                        parser->lexer = parser->lexer->next;
+                        parser = parse_while(parser);
                         break;
                     case DIM:
-                        parse_declarations(parser);
+                        parser->lexer = parser->lexer->next;
+                        parser = parse_declarations(parser);
                         break;
                     case END_OF_STREAM:
                         return parser;
                     case END_OF_LINE:
-                        // return parser;
+                        parser->lexer = parser->lexer->next;
                         break;
                     case END:
                         parser->type = END_OF_EXPRESSION;
                         return parser;
                     default:
                         parser->type = PARSE_ERROR;
-                        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "unexpected token for beginning of statement");
+                        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "unexpected token '%s' for beginning of statement", st_to_str(parser->lexer->simple_token));
                         return parser;
                 }
                 break;
@@ -92,7 +88,6 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
         {
             return parser;
         }
-        parser->lexer = parser->lexer->next;
     }
     return parser;
 }
@@ -124,18 +119,58 @@ struct ParseStmts *parse_assignment(char *var_name, struct ParseStmts *parser)
     return parser;
 }
 
-void parse_declarations(struct ParseStmts *parser)
+struct ParseStmts *parse_declarations(struct ParseStmts *parser)
 {
-    struct Parser *parsed_exp = parse_expr(parser->lexer);
-    if (parsed_exp->type != PARSED_EXPRESSION)
+    struct Lexer *lexer = parser->lexer;
+    enum TokenType t;
+    const char *err;
+    int length = 0;
+
+    // validate input, get number of declarations
+    while (true)
     {
-        parser->error = parsed_exp->error;
-        parser->type = parsed_exp->type;
-        return;
+        t = parser->lexer->type; 
+        if (t != VARIABLE_TOKEN)
+        {
+            parser->type = PARSE_ERROR;
+            err = "expected variable name";
+            parser->error = error(parser->lexer->line_number, parser->lexer->column_number, err);
+            return parser;
+        }
+        parser->lexer = parser->lexer->next;
+        length++;
+
+        if (parse_simple_tok(parser, END_OF_LINE, err))
+        {
+            break;
+        }
+        err = "unexpected token in declaration";
+        if (!(parse_simple_tok(parser, COMMA, err)))
+        {
+            return parser;
+        }
     }
-    else
+
+    char **vars = malloc(length * sizeof(char *));
+    for (int i = 0; i < length; i++)
     {
+        vars[i] = lexer->variable;
+        lexer = lexer->next->next;
+        // log("var %d: %s\n", i, vars[i]);
     }
+
+    struct Declaration *decl = malloc(sizeof(struct Declaration));
+    decl->names = vars;
+    decl->length = length;
+
+    struct Statement *stmt;
+    stmt = malloc(sizeof(struct Statement));
+    stmt->type = DECLARATION;
+    stmt->declaration = decl;
+
+    add_stmt(&(parser->stmts), stmt);
+    parser->type = PARSED_EXPRESSION;
+    return parser;
 }
 
 struct ParseStmts *parse_if(struct ParseStmts *parser)
@@ -152,24 +187,13 @@ struct ParseStmts *parse_if(struct ParseStmts *parser)
         parser->error = exp_parser->error;
         return parser;
     }
-    // parse "then"
-    if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != THEN)
+
+    // parse then + newline
+    if (!(parse_simple_tok(parser, THEN, "if statement must be terminated by 'then'") 
+                && parse_simple_tok(parser, END_OF_LINE, "if statement must be terminated by newline")))
     {
-        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "if statement must be terminated by 'then'");
-        parser->type = PARSE_ERROR;
         return parser;
     }
-    parser->lexer = parser->lexer->next;
-
-
-    // parse newline
-    if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != END_OF_LINE)
-    {
-        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "if statement must be terminated by newline");
-        parser->type = PARSE_ERROR;
-        return parser;
-    }
-    parser->lexer = parser->lexer->next;
 
     // parse statements
     body = parse_stmts(parser->lexer);
@@ -182,41 +206,82 @@ struct ParseStmts *parse_if(struct ParseStmts *parser)
     }
 
     // parse end if 
-    if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != END)
+    const char *err = "if statement must be terminated by 'end if'";
+    if (!(parse_simple_tok(parser, END, err) 
+                && parse_simple_tok(parser, IF_TOK, err)
+                && (parse_simple_tok(parser, END_OF_LINE, err) 
+                    || parse_simple_tok(parser, END_OF_STREAM, err))))
     {
-        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "if statement must be terminated by 'end if'");
-        parser->type = PARSE_ERROR;
         return parser;
     }
-    parser->lexer = parser->lexer->next;
-    if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != IF_TOK)
-    {
-        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "if statement must be terminated by 'end if'");
-        parser->type = PARSE_ERROR;
-        return parser;
-    }
-    parser->lexer = parser->lexer->next;
 
-    struct If *if_stmt = malloc(sizeof(struct If));
-    if_stmt->condition = exp_parser->expr;
-    if_stmt->stmts = body->stmts;
-
+    // Populate parser with if statement
     struct Statement *stmt;
     stmt = malloc(sizeof(struct Statement));
     stmt->type = IF;
-    stmt->if_stmt = if_stmt;
+    stmt->if_stmt = malloc(sizeof(struct If));
+    stmt->if_stmt->condition = exp_parser->expr;
+    stmt->if_stmt->stmts = body->stmts;
+
+    add_stmt(&(parser->stmts), stmt);
+    parser->type = PARSED_EXPRESSION;
+
+
+    // log("token: %s\n", st_to_str(st));
+    // print_token(parser->lexer);
+
+    return parser;
+}
+
+struct ParseStmts *parse_while(struct ParseStmts *parser)
+{
+    struct Parser *exp_parser;
+    struct ParseStmts *body;
+    exp_parser = parse_expr(parser->lexer);
+    parser->lexer = exp_parser->lexer;
+
+    // Parse valid expression
+    if (exp_parser->type != PARSED_EXPRESSION)
+    {
+        parser->type = exp_parser->type;
+        parser->error = exp_parser->error;
+        return parser;
+    }
+
+    // parse newline 
+    if (!parse_simple_tok(parser, END_OF_LINE, "while statement must be terminated by newline"))
+    {
+        return parser;
+    }
+
+    // parse statements
+    body = parse_stmts(parser->lexer);
+    parser->lexer = body->lexer;
+    if (body->type == PARSE_ERROR)
+    {
+        parser->type = PARSE_ERROR;
+        parser->error = body->error;
+        return parser;
+    }
+
+    // parse end while
+    const char *err = "while statement must be terminated by 'end while'";
+    if (!(parse_simple_tok(parser, END, err) 
+                && parse_simple_tok(parser, WHILE_TOK, err) 
+                && (parse_simple_tok(parser, END_OF_LINE, err) 
+                    || parse_simple_tok(parser, END_OF_STREAM, err))))
+    {
+        return parser;
+    }
+
+    struct Statement *stmt; 
+    stmt = new_while_loop(exp_parser->expr, body->stmts);
 
     add_stmt(&(parser->stmts), stmt);
     parser->type = PARSED_EXPRESSION;
 
     return parser;
 }
-
-void parse_loop(struct ParseStmts *parser)
-{
-    return;
-}
-
 
 struct Parser *parse_expr(struct Lexer *lexer)
 {
@@ -235,7 +300,6 @@ struct Parser *parse_expr(struct Lexer *lexer)
     parser->lexer = parser->lexer->next;
     return parse_exp_precedence(parser, 0);
 }
-
 
 // Operator precedence parser modified to accept parens + unary operators
 struct Parser *parse_exp_precedence(struct Parser *parser, int min_precedence)
@@ -287,7 +351,7 @@ struct Parser *parse_exp_precedence(struct Parser *parser, int min_precedence)
             expr = malloc(sizeof(struct Expr));
             expr->type = BINARY_EXPRESSION;
             expr->binary_expr = malloc(sizeof(struct BinaryExpr));
-            expr->binary_expr->operation = token_to_op(st);
+            expr->binary_expr->op = token_to_op(st);
             expr->binary_expr->expr1 = parser->expr;
             parser->expr = expr;
             parser = parse_literal(parser); // will populate expression
@@ -377,9 +441,21 @@ struct Parser *parse_literal(struct Parser *parser)
     return parser;
 }
 
+bool parse_simple_tok(struct ParseStmts *parser, enum SimpleToken st, const char *err)
+{
+    if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != st)
+    {
+        parser->type = PARSE_ERROR;
+        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, err);
+        return false;
+    }
+    parser->lexer = parser->lexer->next;
+    return true;
+}
+
 struct FunctionCall *parse_function_call(void)
 {
-    log("\nFATAL ERROR: parse_function_call not implemented\n");
+    // log("\nFATAL ERROR: parse_function_call not implemented\n");
     return NULL;
 }
 

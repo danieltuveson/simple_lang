@@ -4,6 +4,7 @@
 #include "datatype.h"
 #include "lexer.h"
 #include "parser.h"
+#include "interpreter.h"
 
 // IS_DEBUG 1: enables printing statements for debugging
 // IS_DEBUG 0: disables printing statements for debugging

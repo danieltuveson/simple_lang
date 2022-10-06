@@ -10,5 +10,3 @@ if x == 5 then
     end if 
     all_is_good = "grow capacity works?"
 end if 
-
-another = "statement"

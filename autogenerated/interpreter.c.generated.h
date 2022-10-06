@@ -1,0 +1,14 @@
+enum ErrorCode interpret(struct Statements *stmts);
+enum ErrorCode exec(struct Interpreter *interp, struct Statements *stmts);
+enum ErrorCode exec_while(struct Interpreter *interp, struct While *while_loop);
+enum ErrorCode exec_if(struct Interpreter *interp, struct If *if_stmt);
+void exec_assignment(struct Interpreter *interp, struct Assignment *assignment);
+void exec_declaration(struct Interpreter *interp, struct Declaration *decl);
+struct Env *new_environment();
+int var_entry_index(struct Env *env, char *var_name);
+bool var_exists(struct Env *env, char *var_name);
+void add_var(struct Env *env, char *var_name, struct Literal *lit);
+struct Literal *lookup_var(struct Env *env, char *var_name);
+struct Literal *eval(struct Interpreter *interp, struct Expr *expr);
+struct Literal *eval_bin_exp(struct Interpreter *interp, struct BinaryExpr *binary_expr);
+struct Literal *eval_unary_expr(struct Interpreter *interp, struct UnaryExpr *unary_expr);

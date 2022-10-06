@@ -23,8 +23,8 @@ char *st_to_str(enum SimpleToken token)
             return "THEN";
         case END:
             return "END";
-        case WHILE:
-            return "WHILE";
+        case WHILE_TOK:
+            return "WHILE_TOK";
         case NEXT:
             return "NEXT";
         case TRUE:
@@ -70,7 +70,7 @@ char *st_to_str(enum SimpleToken token)
 
 void print_token(struct Lexer *lexer)
 {
-    log("tok l%lu,c%lu: (", lexer->line_number, lexer->column_number);
+    log("line %lu,col %lu: (", lexer->line_number, lexer->column_number);
     switch (lexer->type)
     {
         case SIMPLE_TOKEN:
@@ -215,13 +215,13 @@ void print_expr(struct Expr *expr)
         case UNARY_EXPRESSION:
             log("(");
             log(" ");
-            print_uop(expr->unary_expr->operation);
+            print_uop(expr->unary_expr->op);
             print_expr(expr->unary_expr->expr);
             log(")");
             break;
         case BINARY_EXPRESSION:
             log("(");
-            print_binop(expr->binary_expr->operation);
+            print_binop(expr->binary_expr->op);
             log(" ");
             print_expr(expr->binary_expr->expr1);
             log(" ");
@@ -245,15 +245,25 @@ void print_stmt(int padding, struct Statement *stmt)
             log("condition: ");
             print_expr(stmt->if_stmt->condition);
             log("\n");
-            // tab_fact++;
             print_statements(stmt->if_stmt->stmts);
-            // tab_fact--;
             break;
-        case LOOP:
-            log("printer not implemented\n");
+        case WHILE_LOOP:
+            log("while\n");
+            print_padding(padding);
+            log("condition: ");
+            print_expr(stmt->while_loop->condition);
+            log("\n");
+            print_statements(stmt->while_loop->stmts);
             break;
         case DECLARATION:
-            log("printer not implemented\n");
+            log("dim ");
+            for (unsigned int i = 0; i < stmt->declaration->length; i++)
+            {
+                log("%s", stmt->declaration->names[i]);
+                if (i + 1 < stmt->declaration->length)
+                    log(", ");
+            }
+            log("\n");
             break;
         case ASSIGNMENT:
             log("assignment\n");
@@ -281,21 +291,13 @@ void print_statements(struct Statements *stmts)
         return;
     }
     print_padding(tab_fact * tabwidth);
-    log("statements: {\n");
-    tab_fact++;
-
-    print_padding(tab_fact * tabwidth);
-    log("size: %d\n",  stmts->size);
-    print_padding(tab_fact * tabwidth);
-    log("capacity: %d\n", stmts->capacity);
-    print_padding(tab_fact * tabwidth);
-    log("statement list: [\n");
+    log("statements (size: %d, capacity: %d) [\n",  stmts->size, stmts->capacity);
     tab_fact++;
     struct Statement *stmt;
     for (int i = 0; i < stmts->size; i++)
     {
         print_padding(tab_fact * tabwidth);
-        log("statement: {\n");
+        log("statement %d: {\n", i + 1);
         tab_fact++;
         print_padding(tab_fact * tabwidth);
 
@@ -309,9 +311,6 @@ void print_statements(struct Statements *stmts)
     tab_fact--;
     print_padding(tab_fact * tabwidth);
     log("]\n");
-    tab_fact--;
-    print_padding(tab_fact * tabwidth);
-    log("}\n");
 
     // struct Statement
     // {
@@ -341,3 +340,47 @@ void print_assignment(struct Assignment *assignment)
     log("\n");
 }
 
+char *err_code_to_str(enum ErrorCode err)
+{
+    switch(err)
+    {
+        case TYPE_ERROR:
+            return "TYPE_ERROR";
+        case REDEFINE_EXISTING_VAR:
+            return "REDEFINE_EXISTING_VAR";
+        case NO_ERROR:
+            return "NO_ERROR";
+        case ASSIGNMENT_BEFORE_DECLARATION:
+             return "ASSIGNMENT_BEFORE_DECLARATION";
+        case UNDECLARED_VARIABLE:
+             return "UNDECLARED_VARIABLE";
+        default:
+            return "unknown error code";
+    }
+}
+
+void print_env(struct Env *env)
+{
+    struct VarEntry *var_entry = NULL;
+    if (env->size == 0) 
+    {
+        log("env: (empty)\n");
+        return;
+    }
+    log("env: {\n");
+    for (unsigned int i = 0; i < env->size; i++)
+    {
+        print_padding(4);
+        var_entry = env->var_entries[i];
+        log("%s = ", var_entry->var_name);
+        print_literal(var_entry->value);
+        log("\n");
+    }
+    log("}\n");
+}
+
+void print_interp(struct Interpreter *interp)
+{
+   log("error code: %s\n", err_code_to_str(interp->error_code));
+   print_env(interp->env);
+}

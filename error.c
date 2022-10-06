@@ -1,9 +1,10 @@
 #include "error.h"
 
-char *error(unsigned long line_number, unsigned long column_number, char *fmt, ...)
+char *error(unsigned long line_number, unsigned long column_number, const char *fmt, ...)
 {
     
-    char *error, *str;
+    char *error; 
+    const char *str;
     unsigned long message_length, template_length;
     template_length = 100;
     for (message_length = 0, str = fmt; 

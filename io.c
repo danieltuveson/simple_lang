@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "error.h"
 #include "log.h"
+#include "interpreter.h"
 
 char *read_file(char *filename)
 {
@@ -61,11 +62,13 @@ void run_file(char *filename)
     parsed_stmts = parse_stmts(lexer);
     if (parsed_stmts->type == PARSE_ERROR)
     {
-        printf("error %s\n", parsed_stmts->error);
+        printf("%s\n", parsed_stmts->error);
         print_statements(parsed_stmts->stmts);
         return;
     }
     print_statements(parsed_stmts->stmts);
+
+    interpret(parsed_stmts->stmts);
 }
 
 void repl(void)

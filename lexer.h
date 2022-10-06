@@ -13,7 +13,7 @@ enum SimpleToken
     ELSEIF,
     THEN,
     END,
-    WHILE,
+    WHILE_TOK,
     NEXT,
     TRUE,
     FALSE,

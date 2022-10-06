@@ -65,13 +65,13 @@ enum ExprType
 
 struct UnaryExpr
 {
-    enum UnaryOp operation;
+    enum UnaryOp op;
     struct Expr *expr;
 };
 
 struct BinaryExpr
 {
-    enum BinaryOp operation;
+    enum BinaryOp op;
     struct Expr *expr1;
     struct Expr *expr2;
 };
@@ -93,13 +93,17 @@ struct If
     struct Statements *stmts;
 };
 
-struct Loop
+struct While
 {
     struct Expr *condition;
     struct Statements *stmts;
 };
 
-// typedef char *Variable;
+// struct Variable
+// {
+//     char *var_name;
+//     unsigned int hash;
+// };
 
 struct Assignment
 {
@@ -107,11 +111,17 @@ struct Assignment
     struct Expr *value;
 };
 
+struct Declaration
+{
+    unsigned int length;
+    char **names;
+};
+
 enum StatementType
 {
     IF,
     // IF_ELSE,
-    LOOP,
+    WHILE_LOOP,
     DECLARATION,
     ASSIGNMENT,
     FUNCTION_CALL_STMT
@@ -124,8 +134,8 @@ struct Statement
     union
     {
         struct If *if_stmt;
-        struct Loop *loop;
-        char **declaration;
+        struct While *while_loop;
+        struct Declaration *declaration;
         struct Assignment *assignment;
         struct FunctionCall *function_call;
     };

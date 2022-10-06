@@ -18,6 +18,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     
-    log("program completed successfully\n");
+    log("finished\n");
     return 0;
 }

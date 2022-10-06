@@ -268,7 +268,7 @@ char *tokens(struct Lexer *lexer, char *string)
             else if (strcmp("end", word) == 0)
                 lexer->simple_token = END;
             else if (strcmp("while", word) == 0)
-                lexer->simple_token = WHILE;
+                lexer->simple_token = WHILE_TOK;
             else if (strcmp("next", word) == 0)
                 lexer->simple_token = NEXT;
             else if (strcmp("true", word) == 0)

@@ -18,7 +18,6 @@ void add_stmt(struct Statements **stmts_ptr, struct Statement *stmt)
         grow_stmts(stmts_ptr);
     stmts->stmts[(*stmts_ptr)->size] = stmt;
     stmts->size++;
-    // log("size of statements: %d\n", (*stmts_ptr)->size);
 }
 
 // probably never need to shrink
@@ -43,3 +42,22 @@ void grow_stmts(struct Statements **stmts_ptr)
     free(old_stmts);
     *stmts_ptr = stmts;
 }
+
+struct Statement *new_while_loop(struct Expr *expr, struct Statements *stmts)
+{
+    struct While *while_loop = malloc(sizeof(struct If));
+    while_loop->condition = expr;
+    while_loop->stmts = stmts;
+
+    struct Statement *stmt;
+    stmt = malloc(sizeof(struct Statement));
+    stmt->type = WHILE_LOOP;
+    stmt->while_loop = while_loop;
+    return stmt;
+}
+
+// IF
+// WHILE_LOOP
+// DECLARATION
+// ASSIGNMENT
+// FUNCTION_CALL_STMT
