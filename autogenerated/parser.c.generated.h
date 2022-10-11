@@ -5,6 +5,7 @@ struct ParseStmts *parse_declarations(struct ParseStmts *parser);
 struct ParseStmts *parse_if(struct ParseStmts *parser);
 struct ParseStmts *parse_while(struct ParseStmts *parser);
 struct Parser *parse_expr(struct Lexer *lexer);
+struct Parser *parse_exprs(struct Parser *parser);
 struct Parser *parse_exp_precedence(struct Parser *parser, int min_precedence);
 struct Parser *parse_literal(struct Parser *parser);
 bool parse_simple_tok(struct ParseStmts *parser, enum SimpleToken st, const char *err);

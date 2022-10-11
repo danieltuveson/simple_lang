@@ -2,6 +2,7 @@
 #define DATATYPE
 
 #include "stdincludes.h"
+#include "lexer.h"
 
 enum LiteralType
 {

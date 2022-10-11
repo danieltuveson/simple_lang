@@ -13,6 +13,14 @@ struct ParseStmts *new_parse_stmts(struct Lexer *lexer)
     return parser;
 }
 
+#define next_tok(parser) (parser)->lexer = (parser)->lexer->next
+#define parse_error(parser, err_msg) \
+    do \
+    { \
+        (parser)->type = PARSE_ERROR; \
+        (parser)->error = error((parser)->lexer->line_number, (parser)->lexer->column_number, (err_msg)); \
+    } while (0)
+
 struct ParseStmts *parse_stmts(struct Lexer *lexer)
 {
     enum TokenType t;
@@ -30,21 +38,21 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
                 switch (parser->lexer->simple_token)
                 {
                     case IF_TOK:
-                        parser->lexer = parser->lexer->next;
+                        next_tok(parser);
                         parser = parse_if(parser);
                         break;
                     case WHILE_TOK:
-                        parser->lexer = parser->lexer->next;
+                        next_tok(parser);
                         parser = parse_while(parser);
                         break;
                     case DIM:
-                        parser->lexer = parser->lexer->next;
+                        next_tok(parser);
                         parser = parse_declarations(parser);
                         break;
                     case END_OF_STREAM:
                         return parser;
                     case END_OF_LINE:
-                        parser->lexer = parser->lexer->next;
+                        next_tok(parser);
                         break;
                     case END:
                         parser->type = END_OF_EXPRESSION;
@@ -57,7 +65,7 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
                 break;
             case VARIABLE_TOKEN:
                 var = parser->lexer->variable;
-                parser->lexer = parser->lexer->next;
+                next_tok(parser);
                 if (parser->lexer->type == SIMPLE_TOKEN && parser->lexer->simple_token == OPEN_PAREN)
                 {
                     // TODO add parser for function call
@@ -65,7 +73,7 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
                 }
                 else if (parser->lexer->type == SIMPLE_TOKEN && parser->lexer->simple_token == EQ_TOK)
                 {
-                    parser->lexer = parser->lexer->next;
+                    next_tok(parser);
                     parser = parse_assignment(var, parser);
                     if (parser->type != PARSED_EXPRESSION)
                     {
@@ -74,14 +82,12 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
                 }
                 else
                 {
-                    parser->type = PARSE_ERROR;
-                    parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "unexpected token, expected variable initialization or function call");
+                    parse_error(parser, "unexpected token, expected variable initialization or function call");
                     return parser;
                 }
                 break;
             default:
-                parser->type = PARSE_ERROR;
-                parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "unexpected token for beginning of statement");
+                parse_error(parser, "unexpected token for beginning of statement");
                 return parser;
         }
         if (parser->type == PARSE_ERROR || (parser->lexer->type == SIMPLE_TOKEN && parser->lexer->simple_token == END_OF_STREAM))
@@ -104,15 +110,8 @@ struct ParseStmts *parse_assignment(char *var_name, struct ParseStmts *parser)
         return parser;
     }
 
-    struct Assignment *assignment;
-    assignment = malloc(sizeof(struct Assignment));
-    assignment->variable = var_name;
-    assignment->value = exp_parser->expr;
-
     struct Statement *stmt;
-    stmt = malloc(sizeof(struct Statement));
-    stmt->type = ASSIGNMENT;
-    stmt->assignment = assignment;
+    stmt = new_assignment(var_name, exp_parser->expr);
 
     add_stmt(&(parser->stmts), stmt);
     parser->type = PARSED_EXPRESSION;
@@ -123,7 +122,6 @@ struct ParseStmts *parse_declarations(struct ParseStmts *parser)
 {
     struct Lexer *lexer = parser->lexer;
     enum TokenType t;
-    const char *err;
     int length = 0;
 
     // validate input, get number of declarations
@@ -132,20 +130,18 @@ struct ParseStmts *parse_declarations(struct ParseStmts *parser)
         t = parser->lexer->type; 
         if (t != VARIABLE_TOKEN)
         {
-            parser->type = PARSE_ERROR;
-            err = "expected variable name";
-            parser->error = error(parser->lexer->line_number, parser->lexer->column_number, err);
+            parse_error(parser, "expected variable name");
             return parser;
         }
-        parser->lexer = parser->lexer->next;
+        next_tok(parser);
         length++;
 
-        if (parse_simple_tok(parser, END_OF_LINE, err))
+        if (parser->lexer->type == SIMPLE_TOKEN && parser->lexer->simple_token == END_OF_LINE)
         {
+            next_tok(parser);
             break;
         }
-        err = "unexpected token in declaration";
-        if (!(parse_simple_tok(parser, COMMA, err)))
+        if (!(parse_simple_tok(parser, COMMA, "unexpected token in declaration")))
         {
             return parser;
         }
@@ -159,14 +155,8 @@ struct ParseStmts *parse_declarations(struct ParseStmts *parser)
         // log("var %d: %s\n", i, vars[i]);
     }
 
-    struct Declaration *decl = malloc(sizeof(struct Declaration));
-    decl->names = vars;
-    decl->length = length;
-
     struct Statement *stmt;
-    stmt = malloc(sizeof(struct Statement));
-    stmt->type = DECLARATION;
-    stmt->declaration = decl;
+    stmt = new_declaration(length, vars);
 
     add_stmt(&(parser->stmts), stmt);
     parser->type = PARSED_EXPRESSION;
@@ -226,10 +216,6 @@ struct ParseStmts *parse_if(struct ParseStmts *parser)
     add_stmt(&(parser->stmts), stmt);
     parser->type = PARSED_EXPRESSION;
 
-
-    // log("token: %s\n", st_to_str(st));
-    // print_token(parser->lexer);
-
     return parser;
 }
 
@@ -288,16 +274,24 @@ struct Parser *parse_expr(struct Lexer *lexer)
     struct Parser *parser;
 
     parser = malloc(sizeof(struct Parser));
+    parser->type = PARSED_EXPRESSION;
     parser->lexer = lexer;
+    parser->error = NULL;
     parser->expr = NULL;
 
+    return parse_exprs(parser);
+}
+
+struct Parser *parse_exprs(struct Parser *parser)
+{
     parser = parse_literal(parser);
 
     if (parser->type != PARSED_EXPRESSION)
     {
         return parser;
     }
-    parser->lexer = parser->lexer->next;
+    next_tok(parser);
+
     return parse_exp_precedence(parser, 0);
 }
 
@@ -308,57 +302,72 @@ struct Parser *parse_exp_precedence(struct Parser *parser, int min_precedence)
     enum SimpleToken st;
     struct Expr *expr = NULL;
 
-    for (t = parser->lexer->type; t == SIMPLE_TOKEN; parser->lexer = parser->lexer->next)
+    for (t = parser->lexer->type; t == SIMPLE_TOKEN; next_tok(parser))
     {
         st = parser->lexer->simple_token;
         if (!is_operator_token(st) || get_operator_precedence(st) < min_precedence)
         {
             return parser;
         }
-        else if (st == CLOSE_PAREN)
-        {
-            parser->type = PARSE_ERROR;
-            parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "no matching open paren");
-            return parser;
-        }
-        else if (st == OPEN_PAREN)
-        {
-            // TODO
-            parser->lexer = parser->lexer->next;
-            parser = parse_literal(parser);
-            if (parser->type != PARSED_EXPRESSION)
-            {
-                return parser;
-            }
+        // else if (st == CLOSE_PAREN)
+        // {
+        //     parse_error(parser, "no matching open paren");
+        //     return parser;
+        // }
+        // else if (st == OPEN_PAREN)
+        // {
+        //     // TODO
+        //     next_tok(parser);
+        //     parser = parse_literal(parser);
+        //     if (parser->type != PARSED_EXPRESSION)
+        //     {
+        //         return parser;
+        //     }
 
-            parser = parse_exp_precedence(parser, min_precedence);
-            if (parser->type != PARSED_EXPRESSION)
-            {
-                return parser;
-            }
-            if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != CLOSE_PAREN)
-            {
-                parser->type = PARSE_ERROR;
-                parser->error = error(parser->lexer->line_number, parser->lexer->column_number, "expecting close paren");
-            }
-            parser->lexer = parser->lexer->next;
-        }
+        //     parser = parse_exp_precedence(parser, min_precedence);
+        //     if (parser->type != PARSED_EXPRESSION)
+        //     {
+        //         return parser;
+        //     }
+        //     if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != CLOSE_PAREN)
+        //     {
+        //         parse_error(parser, "expecting close paren");
+        //     }
+        //     next_tok(parser);
+        // }
         else // found operator token
         {
-            parser->lexer = parser->lexer->next;
+            next_tok(parser);
 
-            // create new expression from token
+            // parse without regard for precedence
+            // expr = malloc(sizeof(struct Expr));
+            // expr->type = BINARY_EXPRESSION;
+            // expr->binary_expr = malloc(sizeof(struct BinaryExpr));
+            // expr->binary_expr->op = token_to_op(st);
+            // expr->binary_expr->expr1 = parser->expr;
+            // parser->expr = expr;
+            // parser = parse_literal(parser); // will populate expression
+            // if (parser->type != PARSED_EXPRESSION)
+            // {
+            //     return parser;
+            // }
+            enum BinaryOp binop;
             expr = malloc(sizeof(struct Expr));
             expr->type = BINARY_EXPRESSION;
             expr->binary_expr = malloc(sizeof(struct BinaryExpr));
-            expr->binary_expr->op = token_to_op(st);
+            binop = token_to_op(st);
+            // for (t = parser->lexer->type; t == SIMPLE_TOKEN; next_tok(parser))
+            while (is_operator_token(st) && get_operator_precedence(st) > min_precedence)
+            {
+                st = parser->lexer->simple_token;
+                return parser;
+            }
+
+
+            expr->binary_expr->op = 
             expr->binary_expr->expr1 = parser->expr;
             parser->expr = expr;
             parser = parse_literal(parser); // will populate expression
-            if (parser->type != PARSED_EXPRESSION)
-            {
-                return parser;
-            }
         }
     }
     return NULL;
@@ -369,6 +378,7 @@ struct Parser *parse_literal(struct Parser *parser)
     struct Expr *expr;
     struct Lexer *lexer;
     enum SimpleToken st;
+    struct Literal *lit;
 
     lexer = parser->lexer;
     expr = NULL;
@@ -379,17 +389,13 @@ struct Parser *parse_literal(struct Parser *parser)
             st = lexer->simple_token;
             if (st == TRUE || st == FALSE)
             {
-                expr = malloc(sizeof(struct Expr));
-                expr->type = LITERAL;
-                expr->literal = malloc(sizeof(struct Literal));
-                expr->literal->type = BOOLEAN;
-                expr->literal->number = st == TRUE ? true : false;
+                lit = new_lnumber(st);
+                expr = new_literal(lit);
                 break;
             }
             else if (is_operator_token(st))
             {
-                parser->type = PARSE_ERROR;
-                parser->error = error(lexer->line_number, lexer->column_number, "operator not expected at this time");
+                parse_error(parser, "operator not expected at this time");
                 return parser;
             }
             else
@@ -399,29 +405,20 @@ struct Parser *parse_literal(struct Parser *parser)
             }
             break;
         case NUMBER_TOKEN:
-            expr = malloc(sizeof(struct Expr));
-            expr->type = LITERAL;
-            expr->literal = malloc(sizeof(struct Literal));
-            expr->literal->type = NUMBER;
-            expr->literal->number = lexer->number;
+            lit = new_lnumber(lexer->number);
+            expr = new_literal(lit);
             break;
         case STRING_TOKEN:
-            expr = malloc(sizeof(struct Expr));
-            expr->type = LITERAL;
-            expr->literal = malloc(sizeof(struct Literal));
-            expr->literal->type = STRING;
-            expr->literal->string = lexer->string;
+            lit = new_lstring(lexer->string);
+            expr = new_literal(lit);
             break;
         case COMMENT_TOKEN:
             parser->type = END_OF_EXPRESSION;
             return parser;
         case VARIABLE_TOKEN:
             // Handle function call option here eventually
-            expr = malloc(sizeof(struct Expr));
-            expr->type = LITERAL;
-            expr->literal = malloc(sizeof(struct Literal));
-            expr->literal->type = VARIABLE;
-            expr->literal->variable = lexer->variable;
+            lit = new_lvar(lexer->variable);
+            expr = new_literal(lit);
             break;
     }
     parser->type = PARSED_EXPRESSION;
@@ -437,7 +434,6 @@ struct Parser *parse_literal(struct Parser *parser)
     {
         assert(false);
     }
-    // parser->lexer = lexer->next;
     return parser;
 }
 
@@ -445,11 +441,10 @@ bool parse_simple_tok(struct ParseStmts *parser, enum SimpleToken st, const char
 {
     if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != st)
     {
-        parser->type = PARSE_ERROR;
-        parser->error = error(parser->lexer->line_number, parser->lexer->column_number, err);
+        parse_error(parser, err);
         return false;
     }
-    parser->lexer = parser->lexer->next;
+    next_tok(parser);
     return true;
 }
 
@@ -459,3 +454,5 @@ struct FunctionCall *parse_function_call(void)
     return NULL;
 }
 
+#undef next_tok
+#undef parse_error
