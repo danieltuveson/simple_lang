@@ -210,6 +210,11 @@ void print_binop(enum BinaryOp binop)
 
 void print_expr(struct Expr *expr)
 {
+    if (expr == NULL)
+    {
+        log("(null)");
+        return;
+    }
     switch (expr->type)
     {
         case UNARY_EXPRESSION:

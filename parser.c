@@ -13,13 +13,13 @@ struct ParseStmts *new_parse_stmts(struct Lexer *lexer)
     return parser;
 }
 
-#define next_tok(parser) (parser)->lexer = (parser)->lexer->next
+#define next_tok(parser) do { (parser)->lexer = (parser)->lexer->next; } while (0)
 #define parse_error(parser, err_msg) \
     do \
-    { \
-        (parser)->type = PARSE_ERROR; \
-        (parser)->error = error((parser)->lexer->line_number, (parser)->lexer->column_number, (err_msg)); \
-    } while (0)
+{ \
+    (parser)->type = PARSE_ERROR; \
+    (parser)->error = error((parser)->lexer->line_number, (parser)->lexer->column_number, (err_msg)); \
+} while (0)
 
 struct ParseStmts *parse_stmts(struct Lexer *lexer)
 {
@@ -27,6 +27,7 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
     char *var;
     struct ParseStmts *parser;
     parser = new_parse_stmts(lexer);
+    int i = 0;
 
     while (true)
     {
@@ -94,6 +95,8 @@ struct ParseStmts *parse_stmts(struct Lexer *lexer)
         {
             return parser;
         }
+        log("count: %d\n\n", i);
+        i++;
     }
     return parser;
 }
@@ -103,9 +106,9 @@ struct ParseStmts *parse_assignment(char *var_name, struct ParseStmts *parser)
     struct Parser *exp_parser;
     exp_parser = parse_expr(parser->lexer);
     parser->lexer = exp_parser->lexer;
-    if (exp_parser->type != PARSED_EXPRESSION)
+    if (exp_parser->type == PARSE_ERROR)
     {
-        parser->type = exp_parser->type;
+        parser->type = PARSE_ERROR;
         parser->error = exp_parser->error;
         return parser;
     }
@@ -219,14 +222,11 @@ struct ParseStmts *parse_if(struct ParseStmts *parser)
     return parser;
 }
 
-struct ParseStmts *parse_while(struct ParseStmts *parser)
-{
-    struct Parser *exp_parser;
-    struct ParseStmts *body;
-    exp_parser = parse_expr(parser->lexer);
-    parser->lexer = exp_parser->lexer;
-
-    // Parse valid expression
+struct ParseStmts *parse_while(struct ParseStmts *parser) 
+{ 
+    struct Parser *exp_parser; 
+    struct ParseStmts *body; exp_parser = parse_expr(parser->lexer); 
+    parser->lexer = exp_parser->lexer; // Parse valid expression 
     if (exp_parser->type != PARSED_EXPRESSION)
     {
         parser->type = exp_parser->type;
@@ -269,111 +269,103 @@ struct ParseStmts *parse_while(struct ParseStmts *parser)
     return parser;
 }
 
-struct Parser *parse_expr(struct Lexer *lexer)
+struct Parser *new_parser(struct Lexer *lexer)
 {
     struct Parser *parser;
-
     parser = malloc(sizeof(struct Parser));
     parser->type = PARSED_EXPRESSION;
     parser->lexer = lexer;
     parser->error = NULL;
     parser->expr = NULL;
-
-    return parse_exprs(parser);
+    return parser;
 }
 
-struct Parser *parse_exprs(struct Parser *parser)
-{
-    parser = parse_literal(parser);
+// using this for debugging, will delete later
+#define DUMP(msg) \
+    do {\
+    log((msg));\
+    log(":\n    ");\
+    print_token(parser->lexer);\
+    log("\n    ");\
+    print_expr(parser->expr);\
+    printf("\n");} while(0)
 
+// Operator precedence parser modified to accept parens + unary operators
+// Based on the algorithm described in the wikipedia article below
+// https://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudocode
+struct Parser *parse_expr(struct Lexer *lexer)
+{
+    struct Parser *parser;
+    parser = new_parser(lexer);
+
+    // Parse literal expression
+    parse_literal(parser);
     if (parser->type != PARSED_EXPRESSION)
     {
         return parser;
     }
-    next_tok(parser);
 
-    return parse_exp_precedence(parser, 0);
+    DUMP("Starting expression parsing");
+
+    // Helper function should handle the rest
+    parse_expr_precedence(parser, parser->expr, 0);
+    return parser;
 }
 
-// Operator precedence parser modified to accept parens + unary operators
-struct Parser *parse_exp_precedence(struct Parser *parser, int min_precedence)
+void parse_expr_precedence(struct Parser *parser, struct Expr *left, int min_precedence)
 {
-    enum TokenType t;
+    struct Expr *right;
     enum SimpleToken st;
-    struct Expr *expr = NULL;
+    enum BinaryOp binop;
+    int prec;
 
-    for (t = parser->lexer->type; t == SIMPLE_TOKEN; next_tok(parser))
+    while (parser->lexer->type == SIMPLE_TOKEN)
     {
         st = parser->lexer->simple_token;
-        if (!is_operator_token(st) || get_operator_precedence(st) < min_precedence)
+        if (!(is_operator_token(st) && ((prec = get_operator_precedence(st)) >= min_precedence)))
         {
-            return parser;
+            break;
         }
-        // else if (st == CLOSE_PAREN)
-        // {
-        //     parse_error(parser, "no matching open paren");
-        //     return parser;
-        // }
-        // else if (st == OPEN_PAREN)
-        // {
-        //     // TODO
-        //     next_tok(parser);
-        //     parser = parse_literal(parser);
-        //     if (parser->type != PARSED_EXPRESSION)
-        //     {
-        //         return parser;
-        //     }
+        binop = token_to_op(st);
+        DUMP("Top of outer loop");
 
-        //     parser = parse_exp_precedence(parser, min_precedence);
-        //     if (parser->type != PARSED_EXPRESSION)
-        //     {
-        //         return parser;
-        //     }
-        //     if (parser->lexer->type != SIMPLE_TOKEN || parser->lexer->simple_token != CLOSE_PAREN)
-        //     {
-        //         parse_error(parser, "expecting close paren");
-        //     }
-        //     next_tok(parser);
-        // }
-        else // found operator token
+        next_tok(parser);
+        parse_literal(parser);
+
+        // check for error with literal parsing
+        if (parser->type == PARSE_ERROR)
         {
-            next_tok(parser);
+            return;
+        }
+        else if (parser->type == END_OF_EXPRESSION)
+        {
+            parse_error(parser, "unexpected end of expression");
+            return;
+        }
 
-            // parse without regard for precedence
-            // expr = malloc(sizeof(struct Expr));
-            // expr->type = BINARY_EXPRESSION;
-            // expr->binary_expr = malloc(sizeof(struct BinaryExpr));
-            // expr->binary_expr->op = token_to_op(st);
-            // expr->binary_expr->expr1 = parser->expr;
-            // parser->expr = expr;
-            // parser = parse_literal(parser); // will populate expression
-            // if (parser->type != PARSED_EXPRESSION)
-            // {
-            //     return parser;
-            // }
-            enum BinaryOp binop;
-            expr = malloc(sizeof(struct Expr));
-            expr->type = BINARY_EXPRESSION;
-            expr->binary_expr = malloc(sizeof(struct BinaryExpr));
-            binop = token_to_op(st);
-            // for (t = parser->lexer->type; t == SIMPLE_TOKEN; next_tok(parser))
-            while (is_operator_token(st) && get_operator_precedence(st) > min_precedence)
+        right = parser->expr;
+        DUMP("Parsed literal");
+
+        // parse higher-precedence operators
+        while (parser->lexer->type == SIMPLE_TOKEN)
+        {
+            st = parser->lexer->simple_token;
+            if (!(is_operator_token(st) && (get_operator_precedence(st) > prec)))
             {
-                st = parser->lexer->simple_token;
-                return parser;
+                break;
             }
-
-
-            expr->binary_expr->op = 
-            expr->binary_expr->expr1 = parser->expr;
-            parser->expr = expr;
-            parser = parse_literal(parser); // will populate expression
+            DUMP("Top of inner loop");
+            parse_expr_precedence(parser, right, prec + 1);
+            right = parser->expr;
         }
+        left = new_bin_expr(binop, left, right);
     }
-    return NULL;
+    parser->expr = left;
+    print_lexer(parser->lexer);
+    return;
 }
 
-struct Parser *parse_literal(struct Parser *parser)
+void parse_literal(struct Parser *parser)
 {
     struct Expr *expr;
     struct Lexer *lexer;
@@ -389,19 +381,19 @@ struct Parser *parse_literal(struct Parser *parser)
             st = lexer->simple_token;
             if (st == TRUE || st == FALSE)
             {
-                lit = new_lnumber(st);
+                lit = new_lbool(st);
                 expr = new_literal(lit);
                 break;
             }
             else if (is_operator_token(st))
             {
                 parse_error(parser, "operator not expected at this time");
-                return parser;
+                return;
             }
             else
             {
                 parser->type = END_OF_EXPRESSION;
-                return parser;
+                return;
             }
             break;
         case NUMBER_TOKEN:
@@ -414,27 +406,16 @@ struct Parser *parse_literal(struct Parser *parser)
             break;
         case COMMENT_TOKEN:
             parser->type = END_OF_EXPRESSION;
-            return parser;
+            return;
         case VARIABLE_TOKEN:
             // Handle function call option here eventually
             lit = new_lvar(lexer->variable);
             expr = new_literal(lit);
             break;
     }
+    next_tok(parser);
     parser->type = PARSED_EXPRESSION;
-    if (parser->expr == NULL)
-    {
-        parser->expr = expr;
-    }
-    else if (parser->expr->type == BINARY_EXPRESSION)
-    {
-        parser->expr->binary_expr->expr2 = expr;
-    }
-    else
-    {
-        assert(false);
-    }
-    return parser;
+    parser->expr = expr;
 }
 
 bool parse_simple_tok(struct ParseStmts *parser, enum SimpleToken st, const char *err)

@@ -15,7 +15,9 @@ void add_stmt(struct Statements **stmts_ptr, struct Statement *stmt)
     struct Statements *stmts;
     stmts = *stmts_ptr;
     if (stmts->size == stmts->capacity)
+    {
         grow_stmts(stmts_ptr);
+    }
     stmts->stmts[(*stmts_ptr)->size] = stmt;
     stmts->size++;
 }
@@ -127,6 +129,18 @@ struct Literal *new_lvar(char *var)
     lit->type = VARIABLE;
     lit->variable = var;
     return lit;
+}
+
+struct Expr *new_bin_expr(enum BinaryOp binop, struct Expr *left_expr, struct Expr *right_expr)
+{
+    struct Expr *expr;
+    expr = malloc(sizeof(struct Expr));
+    expr->type = BINARY_EXPRESSION;
+    expr->binary_expr = malloc(sizeof(struct BinaryExpr));
+    expr->binary_expr->op = binop;
+    expr->binary_expr->expr1 = left_expr;
+    expr->binary_expr->expr2 = right_expr;
+    return expr;
 }
 
 

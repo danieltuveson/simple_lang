@@ -9,3 +9,4 @@ struct Literal *new_lbool(enum SimpleToken st);
 struct Literal *new_lnumber(int num);
 struct Literal *new_lstring(char *str);
 struct Literal *new_lvar(char *var);
+struct Expr *new_bin_expr(enum BinaryOp binop, struct Expr *left_expr, struct Expr *right_expr);

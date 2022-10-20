@@ -160,7 +160,9 @@ bool var_exists(struct Env *env, char *var_name)
 void add_var(struct Env *env, char *var_name, struct Literal *lit)
 {
     if (env->size == MAX_ENV_SIZE)
+    {
         assert(false);
+    }
     int i = var_entry_index(env, var_name);
     if (i != -1)
     {

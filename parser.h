@@ -12,17 +12,23 @@ enum ParseType
     PARSED_EXPRESSION
 };
 
+// enum ParserType
+// {
+//     P_STATEMENTS,
+//     P_EXPRESSION,
+//     P_LITERAL
+// };
+
 struct Parser
 {
     enum ParseType type;
     struct Lexer *lexer;
-    // Going to remove union since partial expression could be 
-    // useful for error messages?
-    // union
-    // {
     char *error;
+
     struct Expr *expr;
-    // };
+    // Maybe will just shove everything in one parser to make my life simpler?
+    // enum ParserType;
+    // struct Statements *stmts;
 };
 
 struct ParseStmts
@@ -33,36 +39,36 @@ struct ParseStmts
     struct Statements *stmts;
 };
 
-static inline int get_operator_precedence(enum SimpleToken simple_token)
+static inline int get_operator_precedence(enum SimpleToken st)
 {
-    if (simple_token == OPEN_PAREN || simple_token == CLOSE_PAREN)
+    if (st == OPEN_PAREN || st == CLOSE_PAREN)
     {
-        return 1;
+        return 7;
     }
-    else if (simple_token == STAR || simple_token == SLASH)
-    {
-        return 2;
-    }
-    else if (simple_token == PLUS || simple_token == MINUS)
-    {
-        return 3;
-    }
-    else if (simple_token == LEQ_TOK || simple_token == GEQ_TOK || 
-            simple_token == GREATER_TOK || simple_token == LESS_TOK)
-    {
-        return 4;
-    }
-    else if (simple_token == DOUBLE_EQ || simple_token == NEQ_TOK)
-    {
-        return 5;
-    }
-    else if (simple_token == AND_TOK)
+    else if (st == STAR || st == SLASH)
     {
         return 6;
     }
-    else if (simple_token == OR_TOK)
+    else if (st == PLUS || st == MINUS)
     {
-        return 7;
+        return 5;
+    }
+    else if (st == LEQ_TOK || st == GEQ_TOK || 
+            st == GREATER_TOK || st == LESS_TOK)
+    {
+        return 4;
+    }
+    else if (st == DOUBLE_EQ || st == NEQ_TOK)
+    {
+        return 3;
+    }
+    else if (st == AND_TOK)
+    {
+        return 2;
+    }
+    else if (st == OR_TOK)
+    {
+        return 1;
     }
     assert(false);
     return -1;
@@ -100,7 +106,6 @@ static inline enum BinaryOp token_to_op(enum SimpleToken st)
             assert(false);
     }
 };
-
 
 
 #include "parser.c.generated.h"

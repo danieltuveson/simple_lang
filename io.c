@@ -37,10 +37,12 @@ void run_file(char *filename)
 {
     char *content;
     struct Lexer *lexer;
-    struct ParseStmts *parsed_stmts;
+    // struct ParseStmts *parsed_stmts;
+    struct Parser *parser;
 
     log("...reading file contents...\n");
     content = read_file(filename);
+    log("contents: \n%s\n", content);
     if (content == NULL)
     {
         fflush(stdin);
@@ -56,19 +58,31 @@ void run_file(char *filename)
         printf("%s\n", err);
         return;
     }
-    print_lexer(lexer);
-
-    log("...parsing contents...\n");
-    parsed_stmts = parse_stmts(lexer);
-    if (parsed_stmts->type == PARSE_ERROR)
+    // print_lexer(lexer);
+    log("...parsing expression...\n");
+    parser = parse_expr(lexer);
+    if (parser->type != PARSE_ERROR)
     {
-        printf("%s\n", parsed_stmts->error);
-        print_statements(parsed_stmts->stmts);
+        log("%s\n", parser->error);
+        print_expr(parser->expr);
+        log("\n");
         return;
     }
-    print_statements(parsed_stmts->stmts);
+    print_expr(parser->expr);
+    log("\n");
 
-    interpret(parsed_stmts->stmts);
+    // log("...parsing contents...\n");
+    // parsed_stmts = parse_stmts(lexer);
+    // if (parsed_stmts->type == PARSE_ERROR)
+    // {
+    //     printf("%s\n", parsed_stmts->error);
+    //     print_statements(parsed_stmts->stmts);
+    //     return;
+    // }
+    // print_statements(parsed_stmts->stmts);
+
+    // log("...running script ...\n");
+    // interpret(parsed_stmts->stmts);
 }
 
 void repl(void)
