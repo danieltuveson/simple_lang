@@ -10,13 +10,13 @@ if x == 2 then
 end if 
 ```
 
-## How to build
-If you have zsh, then just run `zsh run.sh`. If you run with no arguments, you will be dropped into the repl. If you run with a filename as the argument, it will execute that file. If your build was successful, you can just rerun by running the binary `dan_basic` file that is created by the `run.sh` script. I've only tested this on macOS (Apple clang version 13.0.0), so it may not build on all systems / compilers.
+## How to Build
+Run `run.sh` in the terminal of your choice. You will need a Python 3 interpreter to build the source as well as a C compiler. To enable different options when building, run `python3 build.py -h`.
 
 ## TODO
 - Build parser (in progress)
   - Option for else / elseif
-  - Fix operator precedence
+  - ~~Fix operator precedence~~
   - Need to handle parentheses and prefix operators
   - Need to handle function calls
     - Could do this before function definitions so that we 

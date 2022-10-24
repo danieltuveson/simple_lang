@@ -1,8 +1,8 @@
 #include "error.h"
 
+// I guess I need to start with a comment for my regex to work...
 char *error(unsigned long line_number, unsigned long column_number, const char *fmt, ...)
 {
-    
     char *error; 
     const char *str;
     unsigned long message_length, template_length;
@@ -26,11 +26,10 @@ char *error(unsigned long line_number, unsigned long column_number, const char *
     sprintf(error, "Error at line %lu, column %lu: %s", line_number, column_number, message);
     free(message);
 
-
     return error;
 }
 
-char *parse_error(struct Lexer *lexer, char *fmt, ...)
+char *parse_error(struct Lexer *lexer, const char *fmt, ...)
 {
     char *err;
     va_list args;

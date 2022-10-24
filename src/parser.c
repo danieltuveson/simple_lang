@@ -283,12 +283,12 @@ struct Parser *new_parser(struct Lexer *lexer)
 // using this for debugging, will delete later
 #define DUMP(msg) \
     do {\
-    log((msg));\
-    log(":\n    ");\
-    print_token(parser->lexer);\
-    log("\n    ");\
-    print_expr(parser->expr);\
-    printf("\n");} while(0)
+        log((msg));\
+        log(":\n    ");\
+        print_token(parser->lexer);\
+        log("\n    ");\
+        print_expr(parser->expr);\
+        printf("\n");} while(0)
 
 // Operator precedence parser modified to accept parens + unary operators
 // Based on the algorithm described in the wikipedia article below
@@ -354,15 +354,30 @@ void parse_expr_precedence(struct Parser *parser, struct Expr *left, int min_pre
             {
                 break;
             }
+
             DUMP("Top of inner loop");
             parse_expr_precedence(parser, right, prec + 1);
+            if (parser->type == PARSE_ERROR)
+            {
+                return;
+            }
+            else if (parser->type == END_OF_EXPRESSION)
+            {
+                parse_error(parser, "unexpected end of expression");
+                return;
+            }
             right = parser->expr;
         }
         left = new_bin_expr(binop, left, right);
     }
     parser->expr = left;
-    print_lexer(parser->lexer);
+    DUMP("Returning");
     return;
+}
+
+// parses literal, or literal with +/-, or a parenthezied expression
+void parse_expression_unit(struct Parser *parser)
+{
 }
 
 void parse_literal(struct Parser *parser)

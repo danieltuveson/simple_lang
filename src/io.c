@@ -61,13 +61,18 @@ void run_file(char *filename)
     // print_lexer(lexer);
     log("...parsing expression...\n");
     parser = parse_expr(lexer);
-    if (parser->type != PARSE_ERROR)
+    if (parser->type == PARSE_ERROR)
     {
         log("%s\n", parser->error);
         print_expr(parser->expr);
         log("\n");
         return;
     }
+    else if (parser->type == END_OF_EXPRESSION)
+    {
+        log("end of expression\n");
+    }
+    log("success!\n");
     print_expr(parser->expr);
     log("\n");
 
