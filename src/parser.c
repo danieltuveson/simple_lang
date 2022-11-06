@@ -378,6 +378,8 @@ void parse_expr_precedence(struct Parser *parser, struct Expr *left, int min_pre
 // parses literal, or literal with +/-, or a parenthezied expression
 void parse_expression_unit(struct Parser *parser)
 {
+    parser = NULL;
+    return;
 }
 
 void parse_literal(struct Parser *parser)

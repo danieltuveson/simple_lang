@@ -34,6 +34,7 @@ if [[ -e $c_file_name ]]; then
 else
     echo "#include \"$file_name\"" > $c_file_name
     echo "" >> $c_file_name
+    mv $lcase_header_name.* src
 fi
 
 exit 0
