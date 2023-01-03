@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""
+python script for building, compiling, 
+and running the interpreter
+"""
 import os, re, shutil, argparse
 import subprocess as sub
 from pathlib import Path
@@ -12,10 +16,6 @@ EXE_NAME = "dan_basic"
 EXE_TEST_NAME = EXE_NAME + "_test"
 
 def build():
-    """
-    python script for building, compiling, 
-    and running the interpreter
-    """
     sub.run("clear")
 
     # set up some paths 

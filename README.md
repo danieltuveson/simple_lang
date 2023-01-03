@@ -1,4 +1,7 @@
 # dan_basic
+## Abandoned
+I got tired of working on this, but leaving it up in case I decide to come back to it later.
+
 An implementation of a simple language sort of looks like visual basic. I'm trying to keep it simple, so no functions / modules / classes for now, just simple looping / conditionals.
 
 ## Example

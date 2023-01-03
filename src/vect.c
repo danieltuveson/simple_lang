@@ -14,6 +14,7 @@ struct Vect *new_vect(void)
     return vect;
 }
 
+
 void add_item(struct Vect **vect_ptr, void *item)
 {
     struct Vect *vect;
@@ -25,6 +26,7 @@ void add_item(struct Vect **vect_ptr, void *item)
     vect->array[(*vect_ptr)->size] = item;
     vect->size++;
 }
+
 
 // probably never need to shrink
 // once we have the expressions we'll either evaluate or free them
@@ -48,3 +50,4 @@ void grow_vect(struct Vect **vect_ptr)
     free(old_vect);
     *vect_ptr = vect;
 }
+

@@ -5,8 +5,8 @@
 
 struct Vect 
 {
-    size_t size;
-    size_t capacity;
+    size_t size; // number of items currently in array
+    size_t capacity; // number of items array could contain
     void **array;
 };
 
